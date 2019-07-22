@@ -14,6 +14,17 @@ header = [
 ]
 raw_files = glob.iglob(data_dir + '/*.csv')
 
+
+def cleanRow(row):
+    new_row = []
+    for cell in row:
+        cell = cell.strip().title()
+        if cell[:1] == '$':
+            cell = cell[1:].replace(',', '')
+        new_row.append(cell)
+
+    return new_row
+
 full_data = {}
 
 for listing in raw_files:
@@ -24,6 +35,7 @@ for listing in raw_files:
             spamreader = csv.reader(csvfile)
             data = []
             for row in spamreader:
+                row = cleanRow(row)
                 data.append(dict(zip(header, row)))
 
             full_data[file_date] = data
