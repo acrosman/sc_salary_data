@@ -1,10 +1,12 @@
 
 from requests_html import HTMLSession
 import os.path
+import sys
 
+script_dir = sys.path[0]
 admin_site = "https://www.admin.sc.gov"
 salary_path = "/accountability-portal/state-salaries"
-storage_dir = "./raw_data"
+storage_dir = os.path.join(script_dir, "raw_data")
 
 session = HTMLSession()
 r = session.get(admin_site + salary_path)
