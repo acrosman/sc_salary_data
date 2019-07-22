@@ -21,3 +21,4 @@ if not os.path.exists(local_file):
     new_file = open(local_file, "wb")
     new_file.write(data)
     new_file.close()
+    print("New SC Salary data file: " + file_name)
