@@ -5,7 +5,7 @@ import sys
 
 script_dir = sys.path[0]
 admin_site = "https://www.admin.sc.gov"
-salary_path = "/accountability-portal/state-salaries"
+salary_path = "/transparency/state-salaries"
 storage_dir = os.path.join(script_dir, "raw_data")
 
 session = HTMLSession()
