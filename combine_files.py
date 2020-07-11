@@ -25,6 +25,7 @@ def cleanRow(row):
 
     return new_row
 
+
 full_data = {}
 
 for listing in raw_files:
