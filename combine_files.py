@@ -31,7 +31,7 @@ full_data = {}
 for listing in raw_files:
     print(listing)
     if os.path.isfile(listing):
-        file_date = re.match('.*([0-9]{8}).*\.csv$', listing).group(1)
+        file_date = re.match('.*([0-9]{8}).*csv$', listing).group(1)
         with open(listing) as csvfile:
             spamreader = csv.reader(csvfile)
             data = []
