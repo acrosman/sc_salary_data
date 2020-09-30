@@ -22,7 +22,7 @@ Takes all `.csv` files in the `raw_data` directory and combines them into the `p
 
 ### get_emp_data.py
 
-Downloads the employee count reports provided in PDF format (currently). It is designed as a daily cron job, and assumes the link doesn't change and that they do not switch to CSV (which could cause naming conflicts with the salary data).
+Downloads the employee count reports provided in PDF format (currently). It is designed as a daily cron job and assumes the link doesn't change and that they do not switch to CSV (which could cause naming conflicts with the salary data).
 
 # Licensing
 
