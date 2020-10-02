@@ -35,8 +35,11 @@ current_files = glob.iglob(storage_dir + '/*.' + file_extension)
 for listing in current_files:
     print(listing)
     if os.path.isfile(listing) and listing != local_file:
-        file_date = int(re.match('.*([0-9]{8}).*\.' + file_extension + '$',
-                                  listing).group(1))
+        file_date = int(
+            re.match(
+                r'.*([0-9]{8}).*\.' + file_extension + '$', listing
+            ).group(1)
+        )
         if newest['date'] < file_date:
             newest = {'date': file_date, 'file': listing}
 
