@@ -1,5 +1,4 @@
-<h1>Contributing to SC_Salary_Data</h1>
-<hr>
+# Contributing to SC_Salary_Data
 
 I welcome all contributions, large and small, and I'm happy to help new developers get started working on public code. :heart:
 
