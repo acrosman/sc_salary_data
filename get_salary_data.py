@@ -2,6 +2,7 @@
 from requests_html import HTMLSession
 import os.path
 import sys
+from urllib.parse import unquote
 
 script_dir = sys.path[0]
 admin_site = "https://www.admin.sc.gov"
@@ -14,7 +15,7 @@ r = session.get(admin_site + salary_path)
 csv_link = r.html.find('a[title="State Salary File"]', first=True)
 csv_path = csv_link.attrs['href']
 
-file_name = os.path.basename(csv_path)
+file_name = unquote(os.path.basename(csv_path))
 
 local_file = os.path.join(storage_dir, file_name)
 if not os.path.exists(local_file):
