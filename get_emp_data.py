@@ -9,7 +9,7 @@ import re
 script_dir = sys.path[0]
 now = datetime.now()
 admin_site = "https://www.admin.sc.gov"
-file_path = "/download/ohr/State%20Employees%20by%20County.pdf"
+file_path = "/sites/admin/files/Documents/OED/State_Employees_by_Agency.pdf"
 local_file_name = "State_Employees_By_Agency_" + now.strftime("%Y%m%d")
 storage_dir = os.path.join(script_dir, "raw_data")
 
