@@ -12,7 +12,7 @@ storage_dir = os.path.join(script_dir, "raw_data")
 session = HTMLSession()
 r = session.get(admin_site + salary_path)
 
-csv_link = r.html.find('a[title="State Salary File"]', first=True)
+csv_link = r.html.find('a:contains(\'Download State Salaries\')', first=True)
 csv_path = csv_link.attrs['href']
 
 file_name = unquote(os.path.basename(csv_path))
