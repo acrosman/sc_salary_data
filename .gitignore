@@ -105,3 +105,6 @@ venv.bak/
 
 #editors
 .vscode
+
+# Ignore database files.
+.db
