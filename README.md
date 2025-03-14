@@ -28,6 +28,10 @@ Downloads the employee count reports provided in PDF format. It is designed as a
 
 Takes all `.csv` files in the `raw_data` directory and combines them into a `processed.json` file in order to provide the full historic data set. The project includes a version of that file, but it stops in 2019 (due to file size limitations of Github).
 
+### create_sqlite3_database.py
+
+Creates a SQLite3 database from all the csv data. This script was written with significant support of copilot (in part to test the status of how well copilot works at the time of writing). Over time it may, or may not, be edited by hand and by copilot.
+
 # Licensing
 
 The included License only applies to scripts and text files in this project. The salary information is provided by the SC State government and so the content in the `raw_data` directory is both public domain. All data files are provided with their original content with just file name changes from the originals.
