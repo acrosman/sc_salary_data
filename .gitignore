@@ -108,3 +108,7 @@ venv.bak/
 
 # Ignore database files.
 *.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
