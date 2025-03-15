@@ -85,6 +85,7 @@ print("Clearing existing data...")
 c.execute('DELETE FROM Salary')
 c.execute('DELETE FROM Person')
 c.execute('DELETE FROM DataFiles')
+c.execute('DELETE FROM SQLITE_SEQUENCE WHERE name IN ("Salary", "Person", "DataFiles")')  # Reset autoincrement counters
 conn.commit()
 
 # Function to parse date from filename
