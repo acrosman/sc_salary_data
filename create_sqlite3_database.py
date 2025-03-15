@@ -323,6 +323,7 @@ total_salaries = c.fetchone()[0]
 print(f"Total People: {total_people}")
 print(f"Total Salary Records: {total_salaries}")
 
+# Update each person's record with their most recent employment information from all salary entries
 print("\nUpdating Person records with most recent information...")
 c.execute('''
 UPDATE Person
