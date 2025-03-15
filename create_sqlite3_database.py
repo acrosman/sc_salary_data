@@ -70,7 +70,8 @@ CREATE TABLE IF NOT EXISTS DataFiles (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
     FileName TEXT NOT NULL,
     Rows INTEGER,
-    FileDate DATE
+    FileDate DATE,
+    HasHeader BOOLEAN DEFAULT 0
 )
 ''')
 
@@ -95,11 +96,15 @@ def parse_date_from_filename(filename):
        - mm-dd-yyyy or m-d-yyyy
        - mmddyyyy
        - mm.dd.yyyy or m.d.yyyy
+       - mm-yyyy (uses 1st as day)
+       - mm.yyyy (uses 1st as day)
     """
     date_patterns = [
         r'\d{1,2}-\d{1,2}-\d{4}',  # mm-dd-yyyy or m-d-yyyy
         r'\d{8}',                   # mmddyyyy
-        r'\d{1,2}\.\d{1,2}\.\d{4}'  # mm.dd.yyyy or m.d.yyyy
+        r'\d{1,2}\.\d{1,2}\.\d{4}',  # mm.dd.yyyy or m.d.yyyy
+        r'\d{1,2}-\d{4}',           # mm-yyyy
+        r'\d{1,2}\.\d{4}'           # mm.yyyy
     ]
     for pattern in date_patterns:
         match = re.search(pattern, filename)
@@ -107,8 +112,14 @@ def parse_date_from_filename(filename):
             date_str = match.group()
             try:
                 if '-' in date_str:
+                    if len(date_str.split('-')) == 2:  # mm-yyyy format
+                        month, year = date_str.split('-')
+                        return datetime(int(year), int(month), 1).date()
                     return datetime.strptime(date_str, '%m-%d-%Y' if len(date_str.split('-')[0]) == 2 else '%m-%d-%Y').date()
                 elif '.' in date_str:
+                    if len(date_str.split('.')) == 2:  # mm.yyyy format
+                        month, year = date_str.split('.')
+                        return datetime(int(year), int(month), 1).date()
                     return datetime.strptime(date_str, '%m.%d.%Y' if len(date_str.split('.')[0]) == 2 else '%m.%d.%Y').date()
                 else:
                     return datetime.strptime(date_str, '%m%d%Y').date()
@@ -228,8 +239,9 @@ for filename in os.listdir(raw_data_dir):
                 reader = csv.reader(csvfile)
                 first_row = next(reader)
 
-                # Check if first row is a header
-                if is_header_row(first_row):
+                # Check if first row is a header and store result
+                has_header = is_header_row(first_row)
+                if has_header:
                     print(f"Skipping header row in {filename}")
                 else:
                     csvfile.seek(0)  # Reset to start if no header
@@ -242,7 +254,7 @@ for filename in os.listdir(raw_data_dir):
                             print(f"Processing line {line_count} in {filename}")
 
                         # Skip empty rows or if this is another header-like row
-                        if not row or all(cell.strip() == '' for cell in row) or is_header_row(row):
+                        if not row or all(cell.strip() == '' for cell in row) or (has_header and is_header_row(row)):
                             continue
 
                         # Process the row
@@ -305,9 +317,9 @@ for filename in os.listdir(raw_data_dir):
 
         # Store file information
         c.execute('''
-        INSERT INTO DataFiles (FileName, Rows, FileDate)
-        VALUES (?, ?, ?)
-        ''', (filename, rows_processed, entry_date))
+        INSERT INTO DataFiles (FileName, Rows, FileDate, HasHeader)
+        VALUES (?, ?, ?, ?)
+        ''', (filename, rows_processed, entry_date, 1 if has_header else 0))
 
         # Update totals
         total_lines += rows_processed
