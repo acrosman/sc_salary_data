@@ -183,35 +183,42 @@ for filename in os.listdir(raw_data_dir):
                         row = cleaned_row
 
                         try:
-                            first_name = row[0].strip() if row[0].strip() else 'Unknown'
-                            last_name = row[1].strip() if row[1].strip() else 'Unknown'
-                            title = row[2].strip() if row[2].strip() else 'Unknown'
-                            employer = row[3].strip() if row[3].strip() else 'Unknown'
+                            # Process CSV row based on known column order:
+                            # Last Name, First Name, Employer, Title, Salary, Bonus, Total Pay
+                            try:
+                                last_name = row[0].strip() if row[0].strip() else 'Unknown'
+                                first_name = row[1].strip() if row[1].strip() else 'Unknown'
+                                employer = row[2].strip() if row[2].strip() else 'Unknown'
+                                title = row[3].strip() if row[3].strip() else 'Unknown'
 
-                            # Handle different pay formats
-                            if len(row) >= 5:
-                                # Remove any trailing commas and empty cells
-                                pay_values = [cell.strip() for cell in row[4:] if cell.strip() and not cell.strip().endswith(',')]
+                                # Handle different pay formats
+                                if len(row) >= 5:
+                                    # Remove any trailing commas and empty cells
+                                    pay_values = [cell.strip() for cell in row[4:] if cell.strip() and not cell.strip().endswith(',')]
 
-                                if len(pay_values) == 0:
-                                    print(f"No valid pay data found for {first_name} {last_name}")
+                                    if len(pay_values) == 0:
+                                        print(f"No valid pay data found for {first_name} {last_name}")
+                                        continue
+
+                                    if len(pay_values) == 1:
+                                        # Single value case - treat as total pay
+                                        salary = bonus = None
+                                        total_pay = convert_pay_value(pay_values[0])
+                                    else:
+                                        # Multiple values case
+                                        salary = convert_pay_value(pay_values[0])
+                                        if len(pay_values) > 2:
+                                            bonus = convert_pay_value(pay_values[1])
+                                            total_pay = convert_pay_value(pay_values[2])
+                                        else:
+                                            bonus = None
+                                            total_pay = convert_pay_value(pay_values[-1])
+                                else:
+                                    print(f"Insufficient data columns for {first_name} {last_name}")
                                     continue
 
-                                if len(pay_values) == 1:
-                                    # Single value case - treat as total pay
-                                    total_pay = convert_pay_value(pay_values[0])
-                                    salary = bonus = None
-                                else:
-                                    # Multiple values case
-                                    salary = convert_pay_value(pay_values[0])
-                                    if len(pay_values) > 2:
-                                        bonus = convert_pay_value(pay_values[1])
-                                        total_pay = convert_pay_value(pay_values[2])
-                                    else:
-                                        bonus = None
-                                        total_pay = convert_pay_value(pay_values[-1])
-                            else:
-                                print(f"Insufficient data columns for {first_name} {last_name}")
+                            except ValueError as e:
+                                print(f"Error converting pay values: {e}")
                                 continue
 
                         except (ValueError, IndexError) as e:
