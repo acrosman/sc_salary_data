@@ -48,9 +48,34 @@ CREATE TABLE IF NOT EXISTS Salary (
     Bonus REAL,
     TotalPay REAL,
     EntryDate DATE,
+    SourceFile TEXT,
     FOREIGN KEY (PersonID) REFERENCES Person(ID)
 )
 ''')
+
+# Create indexes for Salary table
+print("Creating Salary table indexes...")
+c.execute('''CREATE INDEX IF NOT EXISTS idx_salary_personid
+             ON Salary(PersonID)''')
+c.execute('''CREATE INDEX IF NOT EXISTS idx_salary_sourcefile
+             ON Salary(SourceFile)''')
+c.execute('''CREATE INDEX IF NOT EXISTS idx_salary_employer
+             ON Salary(Employer)''')
+
+# Create DataFiles table
+print("Creating DataFiles table...")
+c.execute('''
+CREATE TABLE IF NOT EXISTS DataFiles (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    FileName TEXT NOT NULL,
+    Rows INTEGER,
+    FileDate DATE
+)
+''')
+
+# Create index for DataFiles table
+c.execute('''CREATE INDEX IF NOT EXISTS idx_datafiles_filename
+             ON DataFiles(FileName)''')
 
 # Commit the changes
 conn.commit()
@@ -59,6 +84,7 @@ conn.commit()
 print("Clearing existing data...")
 c.execute('DELETE FROM Salary')
 c.execute('DELETE FROM Person')
+c.execute('DELETE FROM DataFiles')
 conn.commit()
 
 # Function to parse date from filename
@@ -206,8 +232,8 @@ for filename in os.listdir(raw_data_dir):
 
                         # Insert salary record
                         c.execute('''
-                        INSERT INTO Salary (PersonID, Title, Employer, Salary, Bonus, TotalPay, EntryDate)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)''', (person_id, title, employer, salary, bonus, total_pay, entry_date))
+                        INSERT INTO Salary (PersonID, Title, Employer, Salary, Bonus, TotalPay, EntryDate, SourceFile)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (person_id, title, employer, salary, bonus, total_pay, entry_date, filename))
 
                         # Update person's most recent details
                         c.execute('''
@@ -245,6 +271,12 @@ for filename in os.listdir(raw_data_dir):
         print(f"Processing time: {processing_time:.2f} seconds")
         print(f"Performance: {lines_per_second:.2f} lines/second")
 
+        # Store file information
+        c.execute('''
+        INSERT INTO DataFiles (FileName, Rows, FileDate)
+        VALUES (?, ?, ?)
+        ''', (filename, rows_processed, entry_date))
+
         # Update totals
         total_lines += rows_processed
         total_time += processing_time
@@ -271,6 +303,38 @@ total_salaries = c.fetchone()[0]
 
 print(f"Total People: {total_people}")
 print(f"Total Salary Records: {total_salaries}")
+
+print("\nUpdating Person records with most recent information...")
+c.execute('''
+UPDATE Person
+SET
+    MostRecentTitle = (
+        SELECT s.Title
+        FROM Salary s
+        WHERE s.PersonID = Person.ID
+        ORDER BY s.EntryDate DESC
+        LIMIT 1
+    ),
+    MostRecentEmployer = (
+        SELECT s.Employer
+        FROM Salary s
+        WHERE s.PersonID = Person.ID
+        ORDER BY s.EntryDate DESC
+        LIMIT 1
+    ),
+    MostRecentEntryDate = (
+        SELECT s.EntryDate
+        FROM Salary s
+        WHERE s.PersonID = Person.ID
+        ORDER BY s.EntryDate DESC
+        LIMIT 1
+    )
+''')
+
+# Commit the final updates
+conn.commit()
+
+print(f"Updated {c.rowcount} Person records with most recent information")
 
 # Close the connection
 conn.close()
