@@ -28,6 +28,15 @@ CREATE TABLE IF NOT EXISTS Person (
 )
 ''')
 
+# Create indexes for Person table
+print("Creating indexes...")
+c.execute('''CREATE INDEX IF NOT EXISTS idx_person_firstname
+             ON Person(FirstName)''')
+c.execute('''CREATE INDEX IF NOT EXISTS idx_person_lastname
+             ON Person(LastName)''')
+c.execute('''CREATE INDEX IF NOT EXISTS idx_person_fullname
+             ON Person(FirstName, LastName)''')
+
 # Create Salary table
 c.execute('''
 CREATE TABLE IF NOT EXISTS Salary (
