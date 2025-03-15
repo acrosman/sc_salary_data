@@ -144,6 +144,71 @@ def is_header_row(row):
     has_numbers = any(any(char.isdigit() for char in cell) for cell in row)
     return has_header_terms and not has_numbers
 
+def process_pay_values(pay_values, first_name, last_name):
+    """Process pay values from CSV row and return salary, bonus, and total pay."""
+    if len(pay_values) == 0:
+        print(f"No valid pay data found for {first_name} {last_name}")
+        return None, None, None
+
+    if len(pay_values) == 1:
+        # Single value case - treat as total pay
+        return None, None, convert_pay_value(pay_values[0])
+
+    # Multiple values case
+    salary = convert_pay_value(pay_values[0])
+    if len(pay_values) > 2:
+        bonus = convert_pay_value(pay_values[1])
+        total_pay = convert_pay_value(pay_values[2])
+    else:
+        bonus = None
+        total_pay = convert_pay_value(pay_values[-1])
+
+    return salary, bonus, total_pay
+
+def process_row(row, filename, reader_line_num):
+    """Process a single row from the CSV file and return the processed values."""
+    # Clean any potential invalid characters from strings
+    cleaned_row = []
+    for cell in row:
+        try:
+            cleaned_cell = cell.encode('utf-8', 'ignore').decode('utf-8')
+            if cleaned_cell != cell:
+                print(f"Warning: Invalid characters removed from cell in {filename}, row {reader_line_num}")
+            cleaned_row.append(cleaned_cell)
+        except UnicodeError as e:
+            print(f"Warning: Unicode error in {filename}, row {reader_line_num}: {e}")
+            cleaned_row.append('')
+
+    row = cleaned_row
+
+    # Extract basic information
+    last_name = row[0].strip() if row[0].strip() else 'Unknown'
+    first_name = row[1].strip() if row[1].strip() else 'Unknown'
+    employer = row[2].strip() if row[2].strip() else 'Unknown'
+    title = row[3].strip() if row[3].strip() else 'Unknown'
+
+    # Handle pay values
+    if len(row) < 5:
+        print(f"Insufficient data columns for {first_name} {last_name}")
+        return None
+
+    # Remove any trailing commas and empty cells
+    pay_values = [cell.strip() for cell in row[4:] if cell.strip() and not cell.strip().endswith(',')]
+    salary, bonus, total_pay = process_pay_values(pay_values, first_name, last_name)
+
+    if total_pay is None:
+        return None
+
+    return {
+        'first_name': first_name,
+        'last_name': last_name,
+        'employer': employer,
+        'title': title,
+        'salary': salary,
+        'bonus': bonus,
+        'total_pay': total_pay
+    }
+
 # Main processing loop for all CSV files
 for filename in os.listdir(raw_data_dir):
     if filename.endswith('.csv'):
@@ -168,7 +233,7 @@ for filename in os.listdir(raw_data_dir):
                     csvfile.seek(0)  # Reset to start if no header
 
                 try:
-                    line_count = 0  # Add counter for progress reporting
+                    line_count = 0
                     for row in reader:
                         line_count += 1
                         if line_count % 10000 == 0:
@@ -178,66 +243,14 @@ for filename in os.listdir(raw_data_dir):
                         if not row or all(cell.strip() == '' for cell in row) or is_header_row(row):
                             continue
 
-                        # Clean any potential invalid characters from strings
-                        cleaned_row = []
-                        for cell in row:
-                            try:
-                                # Attempt to encode and decode to catch invalid characters
-                                cleaned_cell = cell.encode('utf-8', 'ignore').decode('utf-8')
-                                if cleaned_cell != cell:
-                                    print(f"Warning: Invalid characters removed from cell in {filename}, row {reader.line_num}")
-                                cleaned_row.append(cleaned_cell)
-                            except UnicodeError as e:
-                                print(f"Warning: Unicode error in {filename}, row {reader.line_num}: {e}")
-                                cleaned_row.append('')
-
-                        row = cleaned_row
-
-                        try:
-                            # Process CSV row based on known column order:
-                            # Last Name, First Name, Employer, Title, Salary, Bonus, Total Pay
-                            try:
-                                last_name = row[0].strip() if row[0].strip() else 'Unknown'
-                                first_name = row[1].strip() if row[1].strip() else 'Unknown'
-                                employer = row[2].strip() if row[2].strip() else 'Unknown'
-                                title = row[3].strip() if row[3].strip() else 'Unknown'
-
-                                # Handle different pay formats
-                                if len(row) >= 5:
-                                    # Remove any trailing commas and empty cells
-                                    pay_values = [cell.strip() for cell in row[4:] if cell.strip() and not cell.strip().endswith(',')]
-
-                                    if len(pay_values) == 0:
-                                        print(f"No valid pay data found for {first_name} {last_name}")
-                                        continue
-
-                                    if len(pay_values) == 1:
-                                        # Single value case - treat as total pay
-                                        salary = bonus = None
-                                        total_pay = convert_pay_value(pay_values[0])
-                                    else:
-                                        # Multiple values case
-                                        salary = convert_pay_value(pay_values[0])
-                                        if len(pay_values) > 2:
-                                            bonus = convert_pay_value(pay_values[1])
-                                            total_pay = convert_pay_value(pay_values[2])
-                                        else:
-                                            bonus = None
-                                            total_pay = convert_pay_value(pay_values[-1])
-                                else:
-                                    print(f"Insufficient data columns for {first_name} {last_name}")
-                                    continue
-
-                            except ValueError as e:
-                                print(f"Error converting pay values: {e}")
-                                continue
-
-                        except (ValueError, IndexError) as e:
-                            print(f"Error processing row: {row}. Error: {e}")
+                        # Process the row
+                        processed_data = process_row(row, filename, reader.line_num)
+                        if processed_data is None:
                             continue
 
                         # Check if person already exists
-                        c.execute('SELECT ID FROM Person WHERE FirstName = ? AND LastName = ?', (first_name, last_name))
+                        c.execute('SELECT ID FROM Person WHERE FirstName = ? AND LastName = ?',
+                                (processed_data['first_name'], processed_data['last_name']))
                         person = c.fetchone()
 
                         if person:
@@ -246,21 +259,19 @@ for filename in os.listdir(raw_data_dir):
                             # Insert new person
                             c.execute('''
                             INSERT INTO Person (FirstName, LastName, MostRecentTitle, MostRecentEmployer, MostRecentEntryDate)
-                            VALUES (?, ?, ?, ?, ?)''', (first_name, last_name, title, employer, entry_date))
+                            VALUES (?, ?, ?, ?, ?)''',
+                            (processed_data['first_name'], processed_data['last_name'],
+                             processed_data['title'], processed_data['employer'], entry_date))
                             person_id = c.lastrowid
 
                         # Insert salary record
                         c.execute('''
                         INSERT INTO Salary (PersonID, Title, Employer, Salary, Bonus, TotalPay, EntryDate, SourceFile)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (person_id, title, employer, salary, bonus, total_pay, entry_date, filename))
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (person_id, processed_data['title'], processed_data['employer'],
+                         processed_data['salary'], processed_data['bonus'], processed_data['total_pay'],
+                         entry_date, filename))
 
-                        # Update person's most recent details
-                        c.execute('''
-                        UPDATE Person
-                        SET MostRecentTitle = ?, MostRecentEmployer = ?, MostRecentEntryDate = ?
-                        WHERE ID = ?''', (title, employer, entry_date, person_id))
-
-                        # After successful database updates, increment counter
                         rows_processed += 1
 
                 except UnicodeDecodeError as e:
