@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS Salary (
     TotalPay REAL,
     EntryDate DATE,
     SourceFile TEXT,
+    LineNumber INTEGER,
     FOREIGN KEY (PersonID) REFERENCES Person(ID)
 )
 ''')
@@ -206,7 +207,8 @@ def process_row(row, filename, reader_line_num):
         'title': title,
         'salary': salary,
         'bonus': bonus,
-        'total_pay': total_pay
+        'total_pay': total_pay,
+        'line_number': reader_line_num
     }
 
 # Main processing loop for all CSV files
@@ -266,11 +268,11 @@ for filename in os.listdir(raw_data_dir):
 
                         # Insert salary record
                         c.execute('''
-                        INSERT INTO Salary (PersonID, Title, Employer, Salary, Bonus, TotalPay, EntryDate, SourceFile)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                        INSERT INTO Salary (PersonID, Title, Employer, Salary, Bonus, TotalPay, EntryDate, SourceFile, LineNumber)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                         (person_id, processed_data['title'], processed_data['employer'],
                          processed_data['salary'], processed_data['bonus'], processed_data['total_pay'],
-                         entry_date, filename))
+                         entry_date, filename, processed_data['line_number']))
 
                         rows_processed += 1
 
