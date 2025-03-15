@@ -5,18 +5,18 @@ import re
 import time
 from datetime import datetime
 
-# Connect to SQLite database
-conn = sqlite3.connect('EmployeeDB.db')
-c = conn.cursor()
-
-# Add counter at the start of script, after database connection
+# Configuration and tracking variables
+raw_data_dir = 'raw_data'
 files_processed = 0
-
-# Add variables for timing
 total_lines = 0
 total_time = 0
+database_name = 'EmployeeDB.db'
 
-# Create Person table
+# Database initialization and schema creation
+conn = sqlite3.connect(database_name)
+c = conn.cursor()
+
+# Person table stores unique individuals and their most recent employment details
 c.execute('''
 CREATE TABLE IF NOT EXISTS Person (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS Person (
 )
 ''')
 
-# Create indexes for Person table
+# Indexes to optimize person lookups by name
 print("Creating indexes...")
 c.execute('''CREATE INDEX IF NOT EXISTS idx_person_firstname
              ON Person(FirstName)''')
@@ -37,7 +37,7 @@ c.execute('''CREATE INDEX IF NOT EXISTS idx_person_lastname
 c.execute('''CREATE INDEX IF NOT EXISTS idx_person_fullname
              ON Person(FirstName, LastName)''')
 
-# Create Salary table
+# Salary table stores all salary records with foreign key to Person
 c.execute('''
 CREATE TABLE IF NOT EXISTS Salary (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS Salary (
 )
 ''')
 
-# Create indexes for Salary table
+# Indexes to optimize salary record lookups and joins
 print("Creating Salary table indexes...")
 c.execute('''CREATE INDEX IF NOT EXISTS idx_salary_personid
              ON Salary(PersonID)''')
@@ -62,7 +62,7 @@ c.execute('''CREATE INDEX IF NOT EXISTS idx_salary_sourcefile
 c.execute('''CREATE INDEX IF NOT EXISTS idx_salary_employer
              ON Salary(Employer)''')
 
-# Create DataFiles table
+# DataFiles table tracks processed files and their statistics
 print("Creating DataFiles table...")
 c.execute('''
 CREATE TABLE IF NOT EXISTS DataFiles (
@@ -80,7 +80,7 @@ c.execute('''CREATE INDEX IF NOT EXISTS idx_datafiles_filename
 # Commit the changes
 conn.commit()
 
-# Truncate existing tables
+# Reset database for fresh import
 print("Clearing existing data...")
 c.execute('DELETE FROM Salary')
 c.execute('DELETE FROM Person')
@@ -88,9 +88,13 @@ c.execute('DELETE FROM DataFiles')
 c.execute('DELETE FROM SQLITE_SEQUENCE WHERE name IN ("Salary", "Person", "DataFiles")')  # Reset autoincrement counters
 conn.commit()
 
-# Function to parse date from filename
+# Helper function for parsing dates from filenames
 def parse_date_from_filename(filename):
-    """Parse date from filename supporting multiple formats."""
+    """Parse date from filename supporting multiple formats:
+       - mm-dd-yyyy or m-d-yyyy
+       - mmddyyyy
+       - mm.dd.yyyy or m.d.yyyy
+    """
     date_patterns = [
         r'\d{1,2}-\d{1,2}-\d{4}',  # mm-dd-yyyy or m-d-yyyy
         r'\d{8}',                   # mmddyyyy
@@ -112,9 +116,13 @@ def parse_date_from_filename(filename):
                 return None
     return None
 
-# Add this helper function after the parse_date_from_filename function
+# Helper function for converting pay values to floats
 def convert_pay_value(value_str):
-    """Convert pay string to float, handling parentheses as negative numbers."""
+    """Convert pay string to float, handling:
+       - Dollar signs and commas
+       - Parentheses for negative numbers
+       - Empty or invalid values
+    """
     value_str = value_str.strip()
     is_negative = value_str.startswith('(') and value_str.endswith(')')
     # Remove $, commas, and parentheses
@@ -126,14 +134,17 @@ def convert_pay_value(value_str):
         raise ValueError(f"Could not convert {value_str} to number: {e}")
 
 def is_header_row(row):
-    """Check if row appears to be a header by looking for typical header terms and absence of numbers."""
+    """Detect header rows by checking for:
+       - Common header terms
+       - Absence of numeric values
+       - Standard header patterns
+    """
     header_terms = ['name', 'employee', 'title', 'salary', 'pay', 'bonus', 'employer']
     has_header_terms = any(term in ' '.join(row).lower() for term in header_terms)
     has_numbers = any(any(char.isdigit() for char in cell) for cell in row)
     return has_header_terms and not has_numbers
 
-# Process all CSV files in the raw_data directory
-raw_data_dir = 'raw_data'
+# Main processing loop for all CSV files
 for filename in os.listdir(raw_data_dir):
     if filename.endswith('.csv'):
         file_path = os.path.join(raw_data_dir, filename)
