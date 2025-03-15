@@ -2,6 +2,7 @@ import sqlite3
 import os
 import csv
 import re
+import time
 from datetime import datetime
 
 # Connect to SQLite database
@@ -10,6 +11,10 @@ c = conn.cursor()
 
 # Add counter at the start of script, after database connection
 files_processed = 0
+
+# Add variables for timing
+total_lines = 0
+total_time = 0
 
 # Create Person table
 c.execute('''
@@ -98,9 +103,10 @@ for filename in os.listdir(raw_data_dir):
         file_path = os.path.join(raw_data_dir, filename)
         entry_date = parse_date_from_filename(filename)
         rows_processed = 0
+        start_time = time.time()  # Start timing for this file
 
         print(f"\nProcessing file: {filename}")
-        print(f"Data date: {entry_date}")
+        print(f"File Date: {entry_date}")
 
         try:
             # First try UTF-8 with BOM
@@ -115,7 +121,12 @@ for filename in os.listdir(raw_data_dir):
                     csvfile.seek(0)  # Reset to start if no header
 
                 try:
+                    line_count = 0  # Add counter for progress reporting
                     for row in reader:
+                        line_count += 1
+                        if line_count % 10000 == 0:
+                            print(f"Processing line {line_count} in {filename}")
+
                         # Skip empty rows or if this is another header-like row
                         if not row or all(cell.strip() == '' for cell in row) or is_header_row(row):
                             continue
@@ -214,16 +225,32 @@ for filename in os.listdir(raw_data_dir):
                 print(f"Error: Failed to process {filename} with Latin-1 encoding: {e}")
                 continue
 
+        # After file is processed, calculate and display metrics
+        end_time = time.time()
+        processing_time = end_time - start_time
+        lines_per_second = rows_processed / processing_time if processing_time > 0 else 0
+
+        print(f"\nFile Processing Complete:")
+        print(f"File: {filename}")
+        print(f"Rows processed: {rows_processed}")
+        print(f"Processing time: {processing_time:.2f} seconds")
+        print(f"Performance: {lines_per_second:.2f} lines/second")
+
+        # Update totals
+        total_lines += rows_processed
+        total_time += processing_time
+        files_processed += 1
+
         # Commit changes for each file
         conn.commit()
-        print(f"Processed {filename}: {rows_processed} rows")
-        files_processed += 1  # Increment counter after successful processing
 
 # Before closing connection, add summary queries
 print("\nProcessing Summary:")
 print("-----------------")
-# Remove the directory counting line and use the running counter
 print(f"Files Processed: {files_processed}")
+print(f"Total Lines Processed: {total_lines}")
+print(f"Total Processing Time: {total_time:.2f} seconds")
+print(f"Overall Performance: {(total_lines/total_time if total_time > 0 else 0):.2f} lines/second")
 
 # Get total number of people
 c.execute('SELECT COUNT(*) FROM Person')
