@@ -1,3 +1,7 @@
+# This is an Archived Repo
+
+As of the summer of 2026, I no longer live in South Carolina and no longer have family in the employ of the state government – the two drivers I had to maintain this project. So I have archived it. This this project is interesting to you please use the included data and idea to start your own similar project.
+
 # South Carolina State Employee Salary Data
 
 This is a project to explore the SC Salary data that is provided through [the state's Transparency Portal](https://www.admin.sc.gov/transparency/transparency-portal).
